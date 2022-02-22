@@ -6,14 +6,19 @@ from Agent.zzz.prediction.predmlp import TrajPredMLP
 from Agent.zzz.prediction.selfatten import SelfAttentionLayer
 from Agent.zzz.prediction.agent_model.KinematicBicycleModel.kinematic_model import KinematicBicycleModel, KinematicBicycleModel_Pytorch
 
+from tqdm import tqdm
+from Agent.zzz.JunctionTrajectoryPlanner import JunctionTrajectoryPlanner
+from Agent.zzz.controller import Controller
+from Agent.zzz.dynamic_map import DynamicMap
 
-class GNN_Prediction_Model(nn.Module):
+
+class GNNPredictionModel(nn.Module):
     """
     Self_attention GNN with trajectory prediction MLP
     """
 
     def __init__(self, in_channels, out_channels, obs_scale, global_graph_width=128, traj_pred_mlp_width=128):
-        super(Interaction_Transition_Model, self).__init__()
+        super(GNNPredictionModel, self).__init__()
         self.polyline_vec_shape = in_channels
         self.self_atten_layer = SelfAttentionLayer(
             self.polyline_vec_shape, global_graph_width)
@@ -61,6 +66,7 @@ class GNN_Prediction_Model(nn.Module):
         print("pred_state",pred_state)
         pred_state = torch.stack(pred_state)
         return pred_state
+    
     
 class KinematicBicycleModel_Pytorch():
 
@@ -145,14 +151,8 @@ class KinematicBicycleModel_Pytorch():
         return throttle, delta
 
 
-    
-    
-from tqdm import tqdm
-from Agent.zzz.JunctionTrajectoryPlanner import JunctionTrajectoryPlanner
-from Agent.zzz.controller import Controller
-from Agent.zzz.dynamic_map import DynamicMap
 
-class DataStore_Training(object):
+class DataStore_Training():
     
     def __init__(self):
         self.data = []
@@ -161,13 +161,19 @@ class DataStore_Training(object):
         self.ensemble_models = []
         self.ensemble_optimizer = []
 
+        self.heads_num = 10
+        history_frame = 3
+        future_frame = 5
+        self.obs_scale = 1
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+
         for i in range(self.heads_num):
-            predition_model = GNN_Prediction_Model(history_frame * 2, future_frame * 2, self.obs_scale).to(self.device)
+            predition_model = GNNPredictionModel(history_frame * 2, future_frame * 2, self.obs_scale).to(self.device)
             predition_model.apply(self.weight_init)
-            ensemble_models.append()
             self.ensemble_models.append(predition_model)
             self.ensemble_optimizer.append(torch.optim.Adam(predition_model.parameters(), lr = 0.005))
-            env_transition_model.train()
+            predition_model.train()
     
     def add_data(self, obs, done):
         if not done:
