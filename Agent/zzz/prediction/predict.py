@@ -1,9 +1,10 @@
-import numpy as np
 import copy
 import math
+
+import numpy as np
 from Agent.zzz.frenet import Frenet_path
-from Agent.zzz.prediction.gnn_prediction import GNNPredictionModel
-# from Agent.zzz.prediction.gnn_prediction import GNNPredictionModel
+from Agent.zzz.prediction.gnn_prediction import GNN_Prediction_Model
+from train_gnn import Prediction_Model_Training
 
 Use_Learned_Model = False
 
@@ -24,15 +25,7 @@ class Prediction():
         self.heads_num = 10
         
         if Use_Learned_Model:
-            self.ensemble_models = []
-            self.ensemble_optimizer = []
-
-            for i in range(self.heads_num):
-                predition_model = GNNPredictionModel(history_frame * 2, future_frame * 2, self.obs_scale).to(self.device)
-                predition_model.apply(self.weight_init)
-                self.ensemble_models.append(predition_model)
-                self.ensemble_optimizer.append(torch.optim.Adam(predition_model.parameters(), lr = 0.005))
-                predition_model.train()
+            predictin_model_training = Prediction_Model_Training()
   
     def update_prediction(self, dynamic_map):
         self.dynamic_map = dynamic_map

@@ -1,11 +1,12 @@
+import math
+import os
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.nn.parameter import Parameter
-import numpy as np
-import os
-import math
 
 
 def masked_softmax(X, valid_len):
@@ -47,7 +48,6 @@ class SelfAttentionLayer(nn.Module):
 
 
     def forward(self, x):
-
         query = self.q_lin(x)
         key = self.k_lin(x)
         value = self.v_lin(x)

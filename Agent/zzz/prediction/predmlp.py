@@ -1,16 +1,16 @@
-from torch_geometric.data import Data
+import os
+import pdb
+
+# from utils.viz_utils import show_predict_result
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch_geometric.data import Data
 from torch_geometric.nn import MessagePassing, max_pool
-import numpy as np
-import pandas as pd
-# from utils.viz_utils import show_predict_result
-import matplotlib.pyplot as plt
-import numpy as np
-import pdb
-import os
 
 
 class TrajPredMLP(nn.Module):
@@ -25,6 +25,9 @@ class TrajPredMLP(nn.Module):
             nn.Linear(hidden_unit, hidden_unit),
             nn.LayerNorm(hidden_unit),
             nn.LeakyReLU(),
+            # nn.Linear(hidden_unit, hidden_unit),
+            # nn.LayerNorm(hidden_unit),
+            # nn.LeakyReLU(),
 
             nn.Linear(hidden_unit, out_channels)
         )

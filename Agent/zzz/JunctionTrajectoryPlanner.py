@@ -1,14 +1,13 @@
-import numpy as np
 import bisect
 import copy
 import time
 
-from Agent.zzz.tools import *
-from Agent.zzz.prediction.predict import Prediction
-from Agent.zzz.frenet import *
+import numpy as np
 from Agent.zzz.actions import TrajectoryAction
 from Agent.zzz.cubic_spline_planner import Spline2D
-
+from Agent.zzz.frenet import *
+from Agent.zzz.prediction.predict import Prediction
+from Agent.zzz.tools import *
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
@@ -25,9 +24,9 @@ N_S_SAMPLE = 1  # sampling number of target speed
 
 # Collision check
 OBSTACLES_CONSIDERED = 4
-ROBOT_RADIUS = 1  # robot radius [m]
-RADIUS_SPEED_RATIO = 0 # higher speed, bigger circle
-MOVE_GAP = 1
+ROBOT_RADIUS = 2.5  # robot radius [m]
+RADIUS_SPEED_RATIO = 1 # higher speed, bigger circle
+MOVE_GAP = 1.5
 ONLY_SAMPLE_TO_LEFT = True
 
 # Cost weights

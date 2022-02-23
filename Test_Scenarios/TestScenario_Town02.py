@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+
 try:
 	sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
 		sys.version_info.major,
@@ -10,28 +11,28 @@ try:
 except IndexError:
 	pass
 
-import carla
-import time
-import numpy as np
 import math
 import random
-import gym
-#import cv2
 import threading
-from random import randint
-from carla import Location, Rotation, Transform, Vector3D, VehicleControl
+import time
 from collections import deque
-from tqdm import tqdm
-from gym import core, error, spaces, utils
-from gym.utils import seeding
+from random import randint
+
+import carla
+import cv2
+import gym
+import numpy as np
+from Agent.zzz.dynamic_map import Lane, Lanepoint, Vehicle
+from Agent.zzz.tools import *
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
-
-from Agent.zzz.dynamic_map import Lanepoint, Lane, Vehicle
-from Agent.zzz.tools import *
+from carla import Location, Rotation, Transform, Vector3D, VehicleControl
+from gym import core, error, spaces, utils
+from gym.utils import seeding
+from tqdm import tqdm
 
 MAP_NAME = 'Town02'
-OBSTACLES_CONSIDERED = 3 # For t-intersection in Town02
+OBSTACLES_CONSIDERED = 3 
 
 
 global start_point
@@ -106,7 +107,7 @@ class CarEnv_02_Intersection_fixed:
         if self.ego_vehicle_bp.has_attribute('color'):
             color = '255,0,0'
             self.ego_vehicle_bp.set_attribute('color', color)
-            self.ego_vehicle_bp.set_attribute('role_name', "ego_vehicle")
+            self.ego_vehicle_bp.set_attribute('role_name', "hero")
         self.ego_collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
         self.ego_vehicle = None
         self.stuck_time = 0
@@ -239,6 +240,33 @@ class CarEnv_02_Intersection_fixed:
             else:
                 break
         return state
+    
+    def wrap_state_as_list(self):
+        state  = []
+
+        ego_vehicle_state = [self.ego_vehicle.get_location().x,
+                             self.ego_vehicle.get_location().y,
+                             self.ego_vehicle.get_velocity().x,
+                             self.ego_vehicle.get_velocity().y,
+                             self.ego_vehicle.get_transform().rotation.yaw / 180.0 * math.pi]
+        state.append(ego_vehicle_state)
+
+
+        # Obs state
+        actor_list = self.world.get_actors()
+        vehicle_list = actor_list.filter("*vehicle*")
+        closest_obs = self.found_closest_obstacles_by_distance(vehicle_list)
+        
+        for vehicle in closest_obs:
+            vehicle_state = [vehicle.get_location().x,
+                             vehicle.get_location().y,
+                             vehicle.get_velocity().x,
+                             vehicle.get_velocity().y,
+                             vehicle.get_transform().rotation.yaw / 180.0 * math.pi]
+            
+            state.append(vehicle_state)
+        
+        return state
 
     def found_closest_obstacles_t_intersection(self, ego_ffstate):
         obs_tuples = []
@@ -263,27 +291,39 @@ class CarEnv_02_Intersection_fixed:
         sorted_obs = sorted(obs_tuples, key=lambda obs: obs[5])   
         for obs in sorted_obs:
             closest_obs[0] = obs 
-        # put_1st = False
-        # put_2nd = False
-        # put_3rd = False
-        # for obs in sorted_obs:
-        #     if obs[0] > 115 and obs[0] < 155 and obs[1] < 195 and obs[1] > 190 and obs[2] > 0 and math.fabs(obs[3]) < 0.5 and put_1st == False and (obs[5] < 60 and obs[5] > -60):
-        #         closest_obs[0] = obs 
-        #         put_1st = True
-        #         continue
-        #     if obs[1] > 185 and obs[1] < 205 and obs[2] < 0.5 and (obs[1] < self.ego_vehicle.get_location().y - 3 or obs[1] < 194) \
-        #             and obs[0] <  self.ego_vehicle.get_location().x - 5 and obs[0] > 110 and put_2nd == False and (obs[5] > 60 or obs[5] < -60):
-        #         closest_obs[1] = obs
-        #         put_2nd = True
-        #         continue
-        #     if obs[1] > 185 and obs[1] < 205 and obs[2] < 0.5 and (obs[1] < self.ego_vehicle.get_location().y - 3 or obs[1] < 194) \
-        #              and obs[0] >  self.ego_vehicle.get_location().x -5 and obs[0] < 150 and put_3rd == False and (obs[5] > 60 or obs[5] < -60):
-        #         closest_obs[2] = obs
-        #         put_3rd = True
-        #         continue
-        #     else:
-        #         continue
+        
         return closest_obs
+  
+  
+    def found_closest_obstacles_by_distance(self, vehicle_list, d_thres=100):
+        d_list = []
+        
+        for v_id, vehicle in enumerate(vehicle_list):
+            if vehicle.attributes['role_name'] == "hero":
+                continue
+            
+            d = vehicle.get_location().distance(self.ego_vehicle.get_location())
+            
+            if d>d_thres:
+                continue
+            
+            d_list.append([v_id, d])
+        
+
+        closest_vehicle_list = []
+        d_list = np.array(d_list)
+        
+        if len(d_list) == 0:
+            return closest_vehicle_list
+        
+        while len(d_list)>0:
+
+            close_id = np.argmin(d_list[:,1])
+            closest_vehicle_list.append(vehicle_list[int(d_list[close_id][0])])
+            d_list = np.delete(d_list, close_id, 0)
+
+        return closest_vehicle_list
+ 
                                             
     def record_information_txt(self):
         if self.task_num > 0:
@@ -316,14 +356,14 @@ class CarEnv_02_Intersection_fixed:
 
     def reset(self):    
         # Env vehicles
-        # self.spawn_fixed_veh()
+        self.spawn_fixed_veh()
 
         # Ego vehicle
         self.spawn_ego_veh()
         self.world.tick() 
 
         # State
-        state = self.wrap_state()
+        state = self.wrap_state_as_list()
 
         # Record
         self.record_information_txt()
@@ -341,7 +381,7 @@ class CarEnv_02_Intersection_fixed:
         self.world.tick()
 
         # State
-        state = self.wrap_state()
+        state = self.wrap_state_as_list()
 
         # Step reward
         reward = 0
@@ -370,17 +410,17 @@ class CarEnv_02_Intersection_fixed:
         self.case_list = []
 
         # one vehicle from left
-        # for i in range(0,10):
-        #     spawn_vehicles = []
-        #     transform = Transform()
-        #     transform.location.x = 92 + i * 5# Go forward >=146
-        #     transform.location.y = 191.8
-        #     transform.location.z = 1
-        #     transform.rotation.pitch = 0
-        #     transform.rotation.yaw = 0
-        #     transform.rotation.roll = 0
-        #     spawn_vehicles.append(transform)
-        #     self.case_list.append(spawn_vehicles)
+        for i in range(0,10):
+            spawn_vehicles = []
+            transform = Transform()
+            transform.location.x = 92 + i * 5# Go forward >=146
+            transform.location.y = 191.8
+            transform.location.z = 1
+            transform.rotation.pitch = 0
+            transform.rotation.yaw = 0
+            transform.rotation.roll = 0
+            spawn_vehicles.append(transform)
+            self.case_list.append(spawn_vehicles)
 
         # one vehicle from right
         # for i in range(0,10):
@@ -514,7 +554,7 @@ class CarEnv_02_Intersection_fixed:
         synchronous_master = True
 
         for vehicle in vehicle_list:
-            if vehicle.attributes['role_name'] != "ego_vehicle" :
+            if vehicle.attributes['role_name'] != "hero" :
                 vehicle.destroy()
 
         batch = []

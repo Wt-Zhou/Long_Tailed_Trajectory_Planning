@@ -110,6 +110,40 @@ class DynamicMap():
             self.lanes.append(env.ref_path)
             self.lanes_id.append(0)
             self.lanes_updated = True
+            
+    def update_map_from_list_obs(self, obs, env):
+        self.init_dynamic_map()
+
+        # Ego information from list obs
+        ego_vehicle_state = obs[0]
+        self.ego_vehicle.x = ego_vehicle_state[0]
+        self.ego_vehicle.y = ego_vehicle_state[1]
+        self.ego_vehicle.vx = ego_vehicle_state[2]
+        self.ego_vehicle.vy = ego_vehicle_state[3]
+        self.ego_vehicle.v = math.sqrt(self.ego_vehicle.vx ** 2 + self.ego_vehicle.vy ** 2)
+        self.ego_vehicle.yaw = ego_vehicle_state[4]
+        self.ego_vehicle.lane_idx = 0
+
+        # Env information from obs
+        for i in range(1,len(obs)):
+            vehicle = Vehicle()
+            vehicle.x = obs[i][0]
+            vehicle.y = obs[i][1]
+            vehicle.vx = obs[i][2]
+            vehicle.vy = obs[i][3]
+            vehicle.v = math.sqrt(vehicle.vx ** 2 + vehicle.vy ** 2)
+            vehicle.yaw = obs[i][4]
+            vehicle.lane_idx = 0
+            self.vehicles.append(vehicle)
+
+        # print("[Dynamic Map]: Add env vehicles num", len(self.vehicles))
+
+
+        # Only append Ref path here
+        if len(self.lanes) == 0:
+            self.lanes.append(env.ref_path)
+            self.lanes_id.append(0)
+            self.lanes_updated = True
     
     def init_dynamic_map(self):
         self.vehicles = []

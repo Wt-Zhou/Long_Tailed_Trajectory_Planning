@@ -1,29 +1,26 @@
+import math
+
+import numpy as np
 import torch
 import torch.nn as nn
-import math
-import numpy as np
+from Agent.zzz.prediction.agent_model.KinematicBicycleModel.kinematic_model import (
+    KinematicBicycleModel, KinematicBicycleModel_Pytorch)
 from Agent.zzz.prediction.predmlp import TrajPredMLP
 from Agent.zzz.prediction.selfatten import SelfAttentionLayer
-from Agent.zzz.prediction.agent_model.KinematicBicycleModel.kinematic_model import KinematicBicycleModel, KinematicBicycleModel_Pytorch
-
-from tqdm import tqdm
-from Agent.zzz.JunctionTrajectoryPlanner import JunctionTrajectoryPlanner
-from Agent.zzz.controller import Controller
-from Agent.zzz.dynamic_map import DynamicMap
 
 
-class GNNPredictionModel(nn.Module):
+class GNN_Prediction_Model(nn.Module):
     """
     Self_attention GNN with trajectory prediction MLP
     """
 
     def __init__(self, in_channels, out_channels, obs_scale, global_graph_width=128, traj_pred_mlp_width=128):
-        super(GNNPredictionModel, self).__init__()
+        super(GNN_Prediction_Model, self).__init__()
         self.polyline_vec_shape = in_channels
         self.self_atten_layer = SelfAttentionLayer(
             self.polyline_vec_shape, global_graph_width)
        
-        self.traj_pred_mlp2 = TrajPredMLP(
+        self.traj_pred_mlp = TrajPredMLP(
             global_graph_width, out_channels, traj_pred_mlp_width)
         
         # Vehicle Model
@@ -36,16 +33,9 @@ class GNNPredictionModel(nn.Module):
 
         self.obs_scale = obs_scale
 
-    def forward(self, obs, action_torch):
-        """
-        args: 
-            data (Data): [x, y, cluster, edge_index, valid_len]
-
-        """
-
-        out = self.self_atten_layer(obs.unsqueeze(0))
+    def forward(self, obs):
+        out = self.self_atten_layer(obs)
         pred_action = self.traj_pred_mlp(out)
-        # pred_state = self.forward_torch_vehicle_model(obs, pred_action) # it is quite slow to use that
         return pred_action
         
     def forward_torch_vehicle_model(self, obs, pred_action):
@@ -151,123 +141,4 @@ class KinematicBicycleModel_Pytorch():
         return throttle, delta
 
 
-
-class DataStore_Training():
-    
-    def __init__(self):
-        self.data = []
-        self.one_trajectory = []
-        
-        self.ensemble_models = []
-        self.ensemble_optimizer = []
-
-        self.heads_num = 10
-        history_frame = 3
-        future_frame = 5
-        self.obs_scale = 1
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-
-        for i in range(self.heads_num):
-            predition_model = GNNPredictionModel(history_frame * 2, future_frame * 2, self.obs_scale).to(self.device)
-            predition_model.apply(self.weight_init)
-            self.ensemble_models.append(predition_model)
-            self.ensemble_optimizer.append(torch.optim.Adam(predition_model.parameters(), lr = 0.005))
-            predition_model.train()
-    
-    def add_data(self, obs, done):
-        if not done:
-            self.one_trajectory.append(obs)
-            if len(self.one_trajectory) > 8:
-                self.data.append(self.one_trajectory[0:7])
-                self.one_trajectory.pop(0)
-        else:
-            self.one_trajectory = []
-                
-    def collect_carla_data(self, env, steps=100000):
-        # Create Agent
-        trajectory_planner = JunctionTrajectoryPlanner()
-        controller = Controller()
-        dynamic_map = DynamicMap()
-        target_speed = 30/3.6 
-
-        pass_time = 0
-        task_time = 0
-        
-        # Loop over episodes
-        for episode in tqdm(range(1, steps + 1), unit='episodes'):
-            
-            # Reset environment and get initial state
-            obs = env.reset()
-            episode_reward = 0
-            done = False
-            decision_count = 0
-            
-            # Loop over steps
-            while True:
-                obs = np.array(obs)
-                dynamic_map.update_map_from_obs(obs, env)
-                rule_trajectory, action = trajectory_planner.trajectory_update(dynamic_map)
-                rule_trajectory = trajectory_planner.trajectory_update_CP(action, rule_trajectory)
-                # Control
-                
-                control_action =  controller.get_control(dynamic_map,  rule_trajectory.trajectory, rule_trajectory.desired_speed)
-                action = [control_action.acc, control_action.steering]
-                new_obs, reward, done, _ = env.step(action)  
-                
-                self.add_data(new_obs, done)
-                 
-                dynamic_map.update_map_from_obs(new_obs, env)
-
-                obs = new_obs
-                episode_reward += reward      
-
-                if done:
-                    trajectory_planner.clear_buff(clean_csp=False)
-                    task_time += 1
-                    if reward > 0:
-                        pass_time += 1
-                    break
-
-    def train_model(self):
-        one_trajectory = self.data[0]
-
-            
-        
-        self.data.pop(0)
-        return x,y
-    
-    def weight_init(self, m):
-        if isinstance(m, nn.Linear):
-            # nn.init.uniform_(m.weight, a=-0.1, b=0.1)
-            nn.init.xavier_normal_(m.weight)
-            nn.init.constant_(m.bias, 0)
-        # 也可以判断是否为conv2d，使用相应的初始化方式 
-        elif isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-        # 是否为批归一化层
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1)
-            nn.init.constant_(m.bias, 0)
-
-    def save_prediction_model(self, step):
-        for i in range(self.heads_num):
-            torch.save(
-                self.ensemble_models[i].state_dict(),
-                'save_model/ensemble_models_%s_%s.pt' % (step, i)
-            )
-            
-    def load_prediction_model(self, load_step):
-        try:
-            for i in range(self.heads_num):
-
-                self.ensemble_models[i].load_state_dict(
-                torch.load('save_model/transition_model_%s_%s.pt' % (load_step, i))
-                )
-            print("[Prediction_Model] : Load learned model successful, step=",load_step)
-        except:
-            load_step = 0
-            print("[Prediction_Model] : No learned model, Creat new model")
-        return load_step
-    
         

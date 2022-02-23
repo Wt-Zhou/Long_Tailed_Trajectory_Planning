@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+
 try:
 	sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
 		sys.version_info.major,
@@ -13,19 +14,20 @@ try:
 except IndexError:
 	pass
 
-import carla
-import time
-import numpy as np
 import math
 import random
+import time
+
+import carla
 import gym
 import matplotlib.pyplot as plt
-
+import numpy as np
 from tqdm import tqdm
-from Test_Scenarios.TestScenario_Town02 import CarEnv_02_Intersection_fixed
-from Agent.zzz.JunctionTrajectoryPlanner import JunctionTrajectoryPlanner
+
 from Agent.zzz.controller import Controller
 from Agent.zzz.dynamic_map import DynamicMap
+from Agent.zzz.JunctionTrajectoryPlanner import JunctionTrajectoryPlanner
+from Test_Scenarios.TestScenario_Town02 import CarEnv_02_Intersection_fixed
 
 # from Agent.zzz.CP import CP, Imagine_Model
 EPISODES=2642
@@ -61,7 +63,7 @@ if __name__ == '__main__':
         # Loop over steps
         while True:
             obs = np.array(obs)
-            dynamic_map.update_map_from_obs(obs, env)
+            dynamic_map.update_map_from_list_obs(obs, env)
             rule_trajectory, action = trajectory_planner.trajectory_update(dynamic_map)
 
             # # action = random.randint(0,6)
@@ -73,28 +75,12 @@ if __name__ == '__main__':
                 control_action =  controller.get_control(dynamic_map,  rule_trajectory.trajectory, rule_trajectory.desired_speed)
                 action = [control_action.acc, control_action.steering]
                 new_obs, reward, done, _ = env.step(action)   
-                dynamic_map.update_map_from_obs(new_obs, env)
+                dynamic_map.update_map_from_list_obs(new_obs, env)
                 if done:
                     break
-                # Set current step for next loop iteration
             obs = new_obs
             episode_reward += reward  
-            
-            # Draw Plot
-            # ax.cla() 
-            
-            # # Real Time
-            # angle = -obs.tolist()[4]/math.pi*180 - 90
-            # rect = plt.Rectangle((obs.tolist()[0],-obs.tolist()[1]),2.2,5,angle=angle, facecolor="red")
-            # ax.add_patch(rect)
-            # angle2 = -obs.tolist()[9]/math.pi*180 - 90
-            # rect = plt.Rectangle((obs.tolist()[5],-obs.tolist()[6]),2.2,5,angle=angle2, facecolor="blue")
-            # ax.add_patch(rect)
-            
-            # # Predict
-            
-            # ax.axis([190,280,-120,-30])
-            # plt.pause(0.0001)          
+                   
 
             if done:
                 trajectory_planner.clear_buff(clean_csp=False)
