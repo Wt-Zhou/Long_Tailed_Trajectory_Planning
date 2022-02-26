@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-import torch
 import math
-from numpy import cos, sin, tan, clip
-from math import atan2, sin, cos
+from math import atan2, cos, sin
+
+import torch
+from numpy import clip, cos, sin, tan
 
 # from Agent.world_model.agent_model.KinematicBicycleModel.libs.normalise_angle import normalise_angle
 normalise_angle = lambda angle : atan2(sin(angle), cos(angle))
@@ -73,7 +74,7 @@ class KinematicBicycleModel():
         """
 
         self.dt = dt
-        self.dt_discre = 1 # Larger discre: More precies but slowly
+        self.dt_discre = 5 # Larger discre: More precies but slowly
         self.wheelbase = wheelbase
         self.max_steer = max_steer
         self.c_r = c_r
@@ -84,7 +85,8 @@ class KinematicBicycleModel():
         
         for i in range(self.dt_discre):
             f_load = velocity * (self.c_r + self.c_a * velocity)
-            velocity += (self.dt/self.dt_discre) * (throttle * 1 - f_load)
+
+            velocity += (self.dt/self.dt_discre) * (throttle - f_load)
             # if velocity <= 0:
             #     velocity = 0
             

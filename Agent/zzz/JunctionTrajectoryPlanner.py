@@ -6,18 +6,18 @@ import numpy as np
 from Agent.zzz.actions import TrajectoryAction
 from Agent.zzz.cubic_spline_planner import Spline2D
 from Agent.zzz.frenet import *
-from Agent.zzz.prediction.predict import Prediction
+from Agent.zzz.prediction.gnn_prediction import Prediction
 from Agent.zzz.tools import *
 
 # Parameter
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 10.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 4.99  # road width sampling length [m]
+MAX_ROAD_WIDTH = 5.0   # maximum road width [m] # related to RL action space
+D_ROAD_W = 1.5  # road width sampling length [m]
 DT = 0.1  # time tick [s]
-MAXT = 4.1  # max prediction time [m]
-MINT = 4.0  # min prediction time [m]
+MAXT = 3.1  # max prediction time [m]
+MINT = 3.0  # min prediction time [m]
 TARGET_SPEED = 30.0 / 3.6  # target speed [m/s]
 D_T_S = 20.0 / 3.6  # target speed sampling length [m/s]
 N_S_SAMPLE = 1  # sampling number of target speed
@@ -73,6 +73,10 @@ class JunctionTrajectoryPlanner(object):
         self.last_trajectory_array_rule = np.c_[0, 0]
         self.last_trajectory_rule = Frenet_path()
         self.reference_path = None
+        
+        # prediction part
+        self.obs_prediction.gnn_predictin_model.infer_obs_list = []
+        
         if clean_csp:
             self.csp = None
     

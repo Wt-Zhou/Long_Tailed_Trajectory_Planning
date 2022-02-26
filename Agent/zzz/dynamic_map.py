@@ -1,8 +1,9 @@
-import numpy as np
 import math
 # import sumolib
 import threading
 import time
+
+import numpy as np
 
 
 class Position():
@@ -59,6 +60,8 @@ class DynamicMap():
         
         self.lanes = []
         self.lanes_id = []
+        
+        self.real_time_obs = None
 
     def update_map(self, carla_world):
         self.init_dynamic_map()
@@ -113,7 +116,7 @@ class DynamicMap():
             
     def update_map_from_list_obs(self, obs, env):
         self.init_dynamic_map()
-
+        self.real_time_obs = obs
         # Ego information from list obs
         ego_vehicle_state = obs[0]
         self.ego_vehicle.x = ego_vehicle_state[0]

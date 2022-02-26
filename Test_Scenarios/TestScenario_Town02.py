@@ -105,7 +105,7 @@ class CarEnv_02_Intersection_fixed:
         global start_point
         self.ego_vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.lincoln.mkz_2020'))
         if self.ego_vehicle_bp.has_attribute('color'):
-            color = '255,0,0'
+            color = '0,0,255'
             self.ego_vehicle_bp.set_attribute('color', color)
             self.ego_vehicle_bp.set_attribute('role_name', "hero")
         self.ego_collision_bp = self.world.get_blueprint_library().find('sensor.other.collision')
@@ -115,7 +115,7 @@ class CarEnv_02_Intersection_fixed:
         # Env Vehicle Setting
         self.env_vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.audi.tt'))
         if self.env_vehicle_bp.has_attribute('color'):
-            color = '0,0,255'
+            color = '255,0,0'
             self.env_vehicle_bp.set_attribute('color', color)
         if self.env_vehicle_bp.has_attribute('driver_id'):
             driver_id = random.choice(self.env_vehicle_bp.get_attribute('driver_id').recommended_values)
@@ -125,6 +125,10 @@ class CarEnv_02_Intersection_fixed:
         # Control Env Vehicle
         self.has_set = np.zeros(1000000)
         self.stopped_time = np.zeros(1000000)   
+        
+        # Debug setting
+        self.debug = self.world.debug
+        self.should_debug = True
 
         # Record
         self.log_dir = "record.txt"
@@ -294,7 +298,6 @@ class CarEnv_02_Intersection_fixed:
         
         return closest_obs
   
-  
     def found_closest_obstacles_by_distance(self, vehicle_list, d_thres=100):
         d_list = []
         
@@ -323,7 +326,6 @@ class CarEnv_02_Intersection_fixed:
             d_list = np.delete(d_list, close_id, 0)
 
         return closest_vehicle_list
- 
                                             
     def record_information_txt(self):
         if self.task_num > 0:
@@ -404,23 +406,34 @@ class CarEnv_02_Intersection_fixed:
             done = True
             print("[CARLA]: Stuck!")
 
-        return state, reward, done, None
+        return state, reward, done, self.ego_vehicle_collision_sign
 
     def init_case(self):
         self.case_list = []
+        
+        spawn_vehicles = []
+        transform = Transform()
+        transform.location.x = 92 
+        transform.location.y = 191.8
+        transform.location.z = 1
+        transform.rotation.pitch = 0
+        transform.rotation.yaw = 0
+        transform.rotation.roll = 0
+        spawn_vehicles.append(transform)
+        self.case_list.append(spawn_vehicles)
 
         # one vehicle from left
-        for i in range(0,10):
-            spawn_vehicles = []
-            transform = Transform()
-            transform.location.x = 92 + i * 5# Go forward >=146
-            transform.location.y = 191.8
-            transform.location.z = 1
-            transform.rotation.pitch = 0
-            transform.rotation.yaw = 0
-            transform.rotation.roll = 0
-            spawn_vehicles.append(transform)
-            self.case_list.append(spawn_vehicles)
+        # for i in range(0,10):
+        #     spawn_vehicles = []
+        #     transform = Transform()
+        #     transform.location.x = 92 + i * 5# Go forward >=146
+        #     transform.location.y = 191.8
+        #     transform.location.z = 1
+        #     transform.rotation.pitch = 0
+        #     transform.rotation.yaw = 0
+        #     transform.rotation.roll = 0
+        #     spawn_vehicles.append(transform)
+        #     self.case_list.append(spawn_vehicles)
 
         # one vehicle from right
         # for i in range(0,10):
@@ -440,7 +453,7 @@ class CarEnv_02_Intersection_fixed:
         #     for j in range(0,10):
         #         spawn_vehicles = []
         #         transform = Transform()
-        #         transform.location.x = 125 + i * 3 # 137 < Turn left <146
+        #         transform.location.x = 125 + i * 1 # 137 < Turn left <146
         #         transform.location.y = 188
         #         transform.location.z = 1
         #         transform.rotation.pitch = 0

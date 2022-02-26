@@ -3,10 +3,7 @@ import math
 
 import numpy as np
 from Agent.zzz.frenet import Frenet_path
-from Agent.zzz.prediction.gnn_prediction import GNN_Prediction_Model
-from train_gnn import Prediction_Model_Training
 
-Use_Learned_Model = False
 
 class Prediction():
     def __init__(self, considered_obs_num, maxt, dt, robot_radius, radius_speed_ratio, move_gap):
@@ -24,20 +21,16 @@ class Prediction():
         self.obs_scale = 1
         self.heads_num = 10
         
-        if Use_Learned_Model:
-            predictin_model_training = Prediction_Model_Training()
   
     def update_prediction(self, dynamic_map):
         self.dynamic_map = dynamic_map
         self.check_radius = self.robot_radius + self.radius_speed_ratio * self.dynamic_map.ego_vehicle.v
-        if Use_Learned_Model:
-            pass
-        else:
-            try:
-                interested_vehicles = self.found_interested_vehicles(self.considered_obs_num)
-                self.predict_paths = self.prediction_obstacle_uniform_speed(interested_vehicles, self.maxt, self.dt)
-            except:
-                self.predict_paths = []
+        
+        try:
+            interested_vehicles = self.found_interested_vehicles(self.considered_obs_num)
+            self.predict_paths = self.prediction_obstacle_uniform_speed(interested_vehicles, self.maxt, self.dt)
+        except:
+            self.predict_paths = []
 
     def check_collision(self, fp):
         
@@ -58,8 +51,6 @@ class Prediction():
         fp_back.y = (np.array(fp.y)-np.sin(np.array(fp.yaw))*self.move_gap).tolist()
 
         for path in self.predict_paths:
-            # print("path.x",path.x)
-            # print("path.y",path.y)
 
             len_predict_t = min(len(fp.x)-1, len(path.t)-1)
             predict_step = 2
@@ -123,67 +114,3 @@ class Prediction():
             predict_paths.append(predict_path_back)
 
         return predict_paths
-
-    def prediction_obstacle_gnn(self, vehicles, max_prediction_time, delta_t): 
-        predict_paths = []
-        for vehicle in vehicles:
-
-            predict_path_front = Frenet_path()
-            predict_path_back = Frenet_path()
-            predict_path_front.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            predict_path_back.t = [t for t in np.arange(0.0, max_prediction_time, delta_t)]
-            ax = 0 #one_ob[9]
-            ay = 0 #one_ob[10]
-            # print("vehicle information",vehicle.x, vehicle.y, vehicle.vx, vehicle.vy, vehicle.yaw)
-
-            vx_predict = vehicle.vx*np.ones(len(predict_path_front.t))
-            vy_predict = vehicle.vy*np.ones(len(predict_path_front.t))
-
-            x_predict = vehicle.x + np.arange(len(predict_path_front.t))*delta_t*vx_predict
-            y_predict = vehicle.y + np.arange(len(predict_path_front.t))*delta_t*vy_predict
-            
-            predict_path_front.x = (x_predict + math.cos(vehicle.yaw)*np.ones(len(predict_path_front.t))*self.move_gap).tolist()
-            predict_path_front.y = (y_predict + math.sin(vehicle.yaw)*np.ones(len(predict_path_front.t))*self.move_gap).tolist()
-            predict_path_back.x = (x_predict - math.cos(vehicle.yaw)*np.ones(len(predict_path_back.t))*self.move_gap).tolist()
-            predict_path_back.y = (y_predict - math.sin(vehicle.yaw)*np.ones(len(predict_path_back.t))*self.move_gap).tolist()
-        
-            predict_paths.append(predict_path_front)
-            predict_paths.append(predict_path_back)
-
-        return predict_paths
-
-    def weight_init(self, m):
-        if isinstance(m, nn.Linear):
-            # nn.init.uniform_(m.weight, a=-0.1, b=0.1)
-            nn.init.xavier_normal_(m.weight)
-            nn.init.constant_(m.bias, 0)
-        # 也可以判断是否为conv2d，使用相应的初始化方式 
-        elif isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-        # 是否为批归一化层
-        elif isinstance(m, nn.BatchNorm2d):
-            nn.init.constant_(m.weight, 1)
-            nn.init.constant_(m.bias, 0)
-
-    def save_prediction_model(self, step):
-        for i in range(self.heads_num):
-            torch.save(
-                self.ensemble_models[i].state_dict(),
-                'save_model/ensemble_models_%s_%s.pt' % (step, i)
-            )
-            
-    def load_prediction_model(self, load_step):
-        try:
-            for i in range(self.heads_num):
-
-                self.ensemble_models[i].load_state_dict(
-                torch.load('save_model/transition_model_%s_%s.pt' % (load_step, i))
-                )
-            print("[Prediction_Model] : Load learned model successful, step=",load_step)
-        except:
-            load_step = 0
-            print("[Prediction_Model] : No learned model, Creat new model")
-        return load_step
-    
-    
-    
