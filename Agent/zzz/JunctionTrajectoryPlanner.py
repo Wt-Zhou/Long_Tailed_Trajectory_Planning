@@ -13,8 +13,8 @@ from Agent.zzz.tools import *
 MAX_SPEED = 50.0 / 3.6  # maximum speed [m/s]
 MAX_ACCEL = 10.0  # maximum acceleration [m/ss]
 MAX_CURVATURE = 500.0  # maximum curvature [1/m]
-MAX_ROAD_WIDTH = 5.0   # maximum road width [m] # related to RL action space
-D_ROAD_W = 1.5  # road width sampling length [m]
+MAX_ROAD_WIDTH = 3.0   # maximum road width [m] # related to RL action space
+D_ROAD_W = 1.0  # road width sampling length [m]
 DT = 0.1  # time tick [s]
 MAXT = 3.1  # max prediction time [m]
 MINT = 3.0  # min prediction time [m]
@@ -24,9 +24,9 @@ N_S_SAMPLE = 1  # sampling number of target speed
 
 # Collision check
 OBSTACLES_CONSIDERED = 4
-ROBOT_RADIUS = 2.5  # robot radius [m]
-RADIUS_SPEED_RATIO = 1 # higher speed, bigger circle
-MOVE_GAP = 1.5
+ROBOT_RADIUS = 1.0  # robot radius [m]
+RADIUS_SPEED_RATIO = 0 # higher speed, bigger circle
+MOVE_GAP = 1.0
 ONLY_SAMPLE_TO_LEFT = True
 
 # Cost weights
@@ -308,7 +308,7 @@ class JunctionTrajectoryPlanner(object):
             left_sample_bound = D_ROAD_W
         else:
             left_sample_bound = MAX_ROAD_WIDTH 
-        for di in np.arange(-MAX_ROAD_WIDTH, left_sample_bound, D_ROAD_W):
+        for di in np.arange(-MAX_ROAD_WIDTH, left_sample_bound+0.1, D_ROAD_W):
 
             # Lateral motion planning
             for Ti in np.arange(MINT, MAXT, DT):

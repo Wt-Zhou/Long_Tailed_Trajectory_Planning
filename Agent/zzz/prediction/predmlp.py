@@ -45,10 +45,10 @@ class TrajPredGaussion(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(in_channels, hidden_unit),
             nn.LayerNorm(hidden_unit),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Linear(hidden_unit, hidden_unit),
             nn.LayerNorm(hidden_unit),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             # nn.Linear(hidden_unit, hidden_unit)
         )
         self.fc_mu = nn.Linear(hidden_unit, out_channels)

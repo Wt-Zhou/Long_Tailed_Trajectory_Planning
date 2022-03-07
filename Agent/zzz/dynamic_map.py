@@ -141,6 +141,7 @@ class DynamicMap():
 
         # print("[Dynamic Map]: Add env vehicles num", len(self.vehicles))
 
+        self.done = env.done
 
         # Only append Ref path here
         if len(self.lanes) == 0:

@@ -17,5 +17,5 @@ if __name__ == '__main__':
     env = CarEnv_02_Intersection_fixed()
 
     training = Prediction_Model_Training()
-    training.learn(env, load_step=0)
+    training.learn(env, load_step=50000, train_episode=61)
 
