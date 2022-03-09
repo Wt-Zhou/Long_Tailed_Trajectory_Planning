@@ -20,7 +20,7 @@ from Agent.zzz.prediction.selfatten import SelfAttentionLayer
 from results import Results
 from tqdm import tqdm
 
-Use_Gaussion_Output = True
+Use_Gaussion_Output = False
 
 
 class GNN_Prediction_Model(nn.Module):
@@ -28,11 +28,13 @@ class GNN_Prediction_Model(nn.Module):
     Self_attention GNN with trajectory prediction MLP
     """
 
-    def __init__(self, in_channels, out_channels, obs_scale, use_gaussion, global_graph_width=128, traj_pred_mlp_width=128):
+    def __init__(self, in_channels, out_channels, obs_scale, use_gaussion, global_graph_width=64, traj_pred_mlp_width=64):
         super(GNN_Prediction_Model, self).__init__()
         self.polyline_vec_shape = in_channels
         self.self_atten_layer = SelfAttentionLayer(
             self.polyline_vec_shape, global_graph_width)
+        self.self_atten_layer_2 = SelfAttentionLayer(
+            global_graph_width, global_graph_width)
 
         self.obs_scale = obs_scale
         self.use_gaussion = use_gaussion
@@ -45,7 +47,7 @@ class GNN_Prediction_Model(nn.Module):
 
     def forward(self, obs):
         out = self.self_atten_layer(obs)
-
+        # out = self.self_atten_layer_2(out)
         if self.use_gaussion:
             pred_action, sigma = self.traj_pred_gau(out)
             return pred_action, sigma
@@ -68,7 +70,7 @@ class Prediction_Model_Training():
         self.train_step = 0
 
         # Parameters of Prediction Model
-        self.heads_num = 10
+        self.heads_num = 5
         self.history_frame = 5
         self.future_frame = 30
         self.obs_scale = 5
@@ -93,7 +95,7 @@ class Prediction_Model_Training():
         self.max_steer = np.deg2rad(60)
         self.dt = 0.1
         self.c_r = 0.01
-        self.c_a = 0.1
+        self.c_a = 0.05
         self.kbm = KinematicBicycleModel(
             self.wheelbase, self.max_steer, self.dt, self.c_r, self.c_a)
 
@@ -228,10 +230,13 @@ class Prediction_Model_Training():
             self.predict_future_paths(one_trajectory[3], done=False)
             paths_of_all_models = self.predict_future_paths(
                 one_trajectory[4], done=False)
-            # print("paths_of_all_models.x",paths_of_all_models[0].x[-1])
-            # print("paths_of_all_models.y",paths_of_all_models[0].y[-1])
-            # print("realPath.x",one_trajectory[5][1])
-            # print("realPath.y",one_trajectory[-1][1][1])
+            # print("paths_of_all_models.x",paths_of_all_models[0].x)
+            # print("paths_of_all_models.y",paths_of_all_models[0].y)
+            # print("realPath.x",one_trajectory[5][1][0])
+            # print("realPath.x",one_trajectory[6][1][0])
+            # print("realPath.x",one_trajectory[7][1][0])
+            # print("realPath.x",one_trajectory[8][1][0])
+            # print("realPath.y",one_trajectory[5][1][1])
             dx = paths_of_all_models[0].x[-1] - one_trajectory[-1][1][0]
             dy = paths_of_all_models[0].y[-1] - one_trajectory[-1][1][1]
             fde = math.sqrt(dx**2 + dy**2)
@@ -308,8 +313,7 @@ class Prediction_Model_Training():
                         x / self.obs_scale for x in [x_t, y_t, vx_t, vy_t, yaw_t]]
                     vehicle_state.extend(scale_state)
                 history_data.append(vehicle_state)
-            history_data = torch.tensor(history_data).to(
-                self.device).unsqueeze(0)
+            history_data = torch.tensor(history_data).to(self.device).unsqueeze(0)
 
             # infer using prediction model
             paths_of_all_models = []
