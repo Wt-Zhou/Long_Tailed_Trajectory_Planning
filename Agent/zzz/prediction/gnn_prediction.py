@@ -70,7 +70,7 @@ class Prediction_Model_Training():
         self.train_step = 0
 
         # Parameters of Prediction Model
-        self.heads_num = 5
+        self.heads_num = 10
         self.history_frame = 5
         self.future_frame = 30
         self.obs_scale = 5
@@ -92,7 +92,7 @@ class Prediction_Model_Training():
 
         # Vehicle Model
         self.wheelbase = 2.96
-        self.max_steer = np.deg2rad(60)
+        self.max_steer = np.deg2rad(30)
         self.dt = 0.1
         self.c_r = 0.01
         self.c_a = 0.05

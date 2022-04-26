@@ -88,21 +88,31 @@ if __name__ == '__main__':
             episode_reward += reward  
             
             # draw debug signal
-            for trajectory in trajectory_planner.all_trajectory:
-                for i in range(len(trajectory[0].x)):
-                    env.debug.draw_point(carla.Location(x=trajectory[0].x[i],y=trajectory[0].y[i],z=env.ego_vehicle.get_location().z+1),
-                                         size=0.05, color=carla.Color(r=0,g=0,b=255), life_time=0.2)
+
+            # for trajectory in trajectory_planner.all_trajectory:
+            #     for i in range(len(trajectory[0].x)-1):
+    
+            #         # env.debug.draw_point(carla.Location(x=trajectory[0].x[i],y=trajectory[0].y[i],z=env.ego_vehicle.get_location().z+1),
+            #         #                      size=0.04, color=carla.Color(r=0,g=0,b=255), life_time=0.11)
+            #         env.debug.draw_line(begin=carla.Location(x=trajectory[0].x[i],y=trajectory[0].y[i],z=env.ego_vehicle.get_location().z+0.1),
+            #                             end=carla.Location(x=trajectory[0].x[i+1],y=trajectory[0].y[i+1],z=env.ego_vehicle.get_location().z+0.1), 
+            #                             thickness=0.1, color=carla.Color(r=0,g=0,b=255), life_time=0.2)
             
             for ref_point in env.ref_path.central_path:
-                env.debug.draw_point(carla.Location(x=ref_point.position.x,y=ref_point.position.y,z=env.ego_vehicle.get_location().z+1),
-                                        size=0.03, color=carla.Color(r=0,g=0,b=0), life_time=0.2)
+                env.debug.draw_point(carla.Location(x=ref_point.position.x,y=ref_point.position.y,z=env.ego_vehicle.get_location().z+0.1),
+                                        size=0.05, color=carla.Color(r=0,g=0,b=0), life_time=0.3)
+                # env.debug.draw_line(begin=carla.Location(x=ref_point.position.x,y=ref_point.position.y,z=env.ego_vehicle.get_location().z+1),
+                #     end=carla.Location(x=ref_point.position.x,y=ref_point.position.y,z=env.ego_vehicle.get_location().z+1), 
+                #     thickness=0.1, color=(0,0,0), life_time=0.1)
             
 
             for predict_trajectory in trajectory_planner.obs_prediction.predict_paths:
-                # print("predict_trajectory",predict_trajectory.x)
-                for i in range(len(predict_trajectory.x)):
-                    env.debug.draw_point(carla.Location(x=predict_trajectory.x[i],y=predict_trajectory.y[i],z=env.ego_vehicle.get_location().z+0.5),
-                                         size=0.05, color=carla.Color(r=255,g=0,b=0), life_time=0.2)  
+                for i in range(len(predict_trajectory.x)-1):
+                    # env.debug.draw_point(carla.Location(x=predict_trajectory.x[i],y=predict_trajectory.y[i],z=env.ego_vehicle.get_location().z+0.5),
+                    #                      size=0.04, color=carla.Color(r=255,g=0,b=0), life_time=0.11)  
+                    env.debug.draw_line(begin=carla.Location(x=predict_trajectory.x[i],y=predict_trajectory.y[i],z=env.ego_vehicle.get_location().z+0.1),
+                                        end=carla.Location(x=predict_trajectory.x[i+1],y=predict_trajectory.y[i+1],z=env.ego_vehicle.get_location().z+0.1), 
+                                        thickness=0.1,  color=carla.Color(255, 0, 0), life_time=0.2)
                     
             
             if done:
